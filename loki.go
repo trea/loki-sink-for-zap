@@ -86,9 +86,7 @@ func (l LokiWriteSyncer) prepareForLokiPush() (io.Reader, error) {
 
 	if err := json.NewEncoder(gz).Encode(lokiPush{
 		Streams: []lokiStream{
-			{Stream: map[string]interface{}{
-				"App": "Foo",
-			},
+			{Stream: l.tags,
 				Values: l.values,
 			},
 		},
