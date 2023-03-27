@@ -74,8 +74,8 @@ type LokiWriteSyncer struct {
 	ctx    context.Context
 	close  context.CancelFunc
 	client *http.Client
-	url    string
-	tags   LokiTags
+	Url    string
+	Tags   LokiTags
 	values []lokiValue
 }
 
@@ -86,7 +86,7 @@ func (l LokiWriteSyncer) prepareForLokiPush() (io.Reader, error) {
 
 	if err := json.NewEncoder(gz).Encode(lokiPush{
 		Streams: []lokiStream{
-			{Stream: l.tags,
+			{Stream: l.Tags,
 				Values: l.values,
 			},
 		},
@@ -104,7 +104,7 @@ func (l LokiWriteSyncer) pushToLoki() (err error) {
 		return err
 	}
 
-	request, reqErr := http.NewRequest(http.MethodPost, l.url+"/loki/api/v1/push", reader)
+	request, reqErr := http.NewRequest(http.MethodPost, l.Url+"/loki/api/v1/push", reader)
 
 	if reqErr != nil {
 		return err
