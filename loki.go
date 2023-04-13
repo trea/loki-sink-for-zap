@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -25,8 +24,8 @@ func (r invalidResponse) Error() string {
 	return fmt.Sprintf("pushToLoki: Expected HTTP 204 No Content, got %d %s with body: \n%s", r.code, http.StatusText(r.code), r.body)
 }
 
-func NewLokiSink(client *http.Client) func(u *url.URL) (zap.Sink, error) {
-	return func(u *url.URL) (zap.Sink, error) {
+func NewLokiSink(client *http.Client) func(u *url.URL, tags LokiTags) (zap.Sink, error) {
+	return func(u *url.URL, tags LokiTags) (zap.Sink, error) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -47,7 +46,7 @@ func NewLokiSink(client *http.Client) func(u *url.URL) (zap.Sink, error) {
 			cancel,
 			client,
 			u.String(),
-			LokiTags{},
+			tags,
 			[]lokiValue{},
 		}, nil
 	}
@@ -77,6 +76,16 @@ type LokiWriteSyncer struct {
 	Url    string
 	Tags   LokiTags
 	values []lokiValue
+}
+
+func NewLokiWriteSyncer(ctx context.Context) *LokiWriteSyncer {
+	ctx, cancel := context.WithCancel(ctx)
+
+	return &LokiWriteSyncer{
+		ctx:    ctx,
+		close:  cancel,
+		client: http.DefaultClient,
+	}
 }
 
 func (l LokiWriteSyncer) prepareForLokiPush() (io.Reader, error) {
@@ -121,10 +130,12 @@ func (l LokiWriteSyncer) pushToLoki() (err error) {
 	}
 
 	if res.StatusCode != 204 {
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
+
+		res.Body.Close()
 
 		return invalidResponse{
 			code: res.StatusCode,
