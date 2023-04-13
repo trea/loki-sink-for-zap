@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -79,6 +78,16 @@ type LokiWriteSyncer struct {
 	values []lokiValue
 }
 
+func NewLokiWriteSyncer(ctx context.Context) *LokiWriteSyncer {
+	ctx, cancel := context.WithCancel(ctx)
+
+	return &LokiWriteSyncer{
+		ctx:    ctx,
+		close:  cancel,
+		client: http.DefaultClient,
+	}
+}
+
 func (l LokiWriteSyncer) prepareForLokiPush() (io.Reader, error) {
 	b := bytes.NewBuffer([]byte{})
 
@@ -121,10 +130,12 @@ func (l LokiWriteSyncer) pushToLoki() (err error) {
 	}
 
 	if res.StatusCode != 204 {
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
+
+		res.Body.Close()
 
 		return invalidResponse{
 			code: res.StatusCode,
