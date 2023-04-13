@@ -24,7 +24,9 @@ func TestSetupLoki(t *testing.T) {
 	var lokiSink zap.Sink
 
 	if err := zap.RegisterSink("loki", func(url *url.URL) (zap.Sink, error) {
-		sink, err := loki_sink_for_zap.NewLokiSink(ts.Client())(url)
+		sink, err := loki_sink_for_zap.NewLokiSink(ts.Client())(url, map[string]interface{}{
+			"Service": "LokiTest",
+		})
 		lokiSink = sink
 		return lokiSink, err
 	}); err != nil {
@@ -32,9 +34,6 @@ func TestSetupLoki(t *testing.T) {
 	}
 
 	conf := zap.NewDevelopmentConfig()
-	conf.InitialFields = map[string]interface{}{
-		"Service": "LokiTest",
-	}
 	conf.Encoding = "json"
 	conf.OutputPaths = []string{"loki://" + testServerUrl}
 	conf.ErrorOutputPaths = []string{"loki://" + testServerUrl}
@@ -74,15 +73,14 @@ func TestFakeLokiError(t *testing.T) {
 	lokiUrl := strings.Replace(ts.URL, "https://", "", 1)
 
 	if err := zap.RegisterSink("lokifake", func(url *url.URL) (zap.Sink, error) {
-		return loki_sink_for_zap.NewLokiSink(ts.Client())(url)
+		return loki_sink_for_zap.NewLokiSink(ts.Client())(url, map[string]interface{}{
+			"service": "LokiTest",
+		})
 	}); err != nil {
 		t.Fatalf("Unable  to register Sink: %+v", err)
 	}
 
 	conf := zap.NewDevelopmentConfig()
-	conf.InitialFields = map[string]interface{}{
-		"Service": "LokiTest",
-	}
 	conf.Encoding = "json"
 	conf.OutputPaths = []string{"lokifake://" + lokiUrl}
 	conf.ErrorOutputPaths = []string{"lokifake://" + lokiUrl}
@@ -114,15 +112,14 @@ func TestUnsafeInsecureHttpSink(t *testing.T) {
 	lokiUrl := strings.Replace(ts.URL, "http://", "", 1)
 
 	if err := zap.RegisterSink("lokifakeunsafe", func(url *url.URL) (zap.Sink, error) {
-		return loki_sink_for_zap.NewLokiSink(ts.Client())(url)
+		return loki_sink_for_zap.NewLokiSink(ts.Client())(url, map[string]interface{}{
+			"service": "LokiTest",
+		})
 	}); err != nil {
 		t.Fatalf("Unable  to register Sink: %+v", err)
 	}
 
 	conf := zap.NewDevelopmentConfig()
-	conf.InitialFields = map[string]interface{}{
-		"Service": "LokiTest",
-	}
 	conf.Encoding = "json"
 	conf.OutputPaths = []string{"lokifakeunsafe://" + lokiUrl + "/?UNSAFE_secure=false"}
 	conf.ErrorOutputPaths = []string{"lokifakeunsafe://" + lokiUrl + "/?UNSAFE_secure=false"}
