@@ -151,10 +151,12 @@ func (l *LokiWriteSyncer) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (l LokiWriteSyncer) Sync() error {
+func (l *LokiWriteSyncer) Sync() error {
 	if err := l.pushToLoki(); err != nil {
 		return err
 	}
+
+	l.values = []lokiValue{}
 
 	return nil
 }
